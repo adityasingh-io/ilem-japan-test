@@ -42,9 +42,10 @@
 
   .custom-featured-product-url {
     margin-bottom: 40px;
+    padding-left: 10px;
   }
 
-  .custom-featured-product-section .product-form__input, .custom-featured-product-section .product-form__buttons {
+  .custom-featured-product-section .product-form__input, .custom-featured-product-section .product-form__submit {
     margin-bottom: 10px;
   }
   
