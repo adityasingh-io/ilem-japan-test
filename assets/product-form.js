@@ -36,8 +36,10 @@ if (!customElements.get('product-form')) {
       }
     
       //Added to generate selling plan add to cart response
-      const sellingPlanId = window.getCurrentSellingPlanId();
-      formData.append("selling_plan", sellingPlanId);
+      if(window.getCurrentSellingPlanId){
+        const sellingPlanId = window.getCurrentSellingPlanId();
+        formData.append("selling_plan", sellingPlanId);
+      }
       
       config.body = formData;
 

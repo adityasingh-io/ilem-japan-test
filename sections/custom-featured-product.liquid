@@ -1,0 +1,211 @@
+{% if section.settings.product %}
+    {{ 'component-product-model.css' | asset_url | stylesheet_tag }}
+    {{ 'component-featured-product.css' | asset_url | stylesheet_tag }}
+
+    {% style %}
+        #custom-featured-product-section--{{ section.id }} {
+            background-color: {{ section.settings.background_color }};
+            color: {{ section.settings.font_color }};
+            font-size: {{ section.settings.font_size }}px;
+        }
+
+        #custom-featured-product-section--{{ section.id }} .product__title, #custom-featured-product-section--{{ section.id }} a {
+            color: {{ section.settings.font_color }};
+        }
+    {% endstyle %}
+
+    {% assign product = all_products[section.settings.product] %}
+    {% assign variant = product.first_available_variant %}
+    {%- assign product_form_id = 'product-form-' | append: section.id -%}
+
+    <div id="custom-featured-product-section--{{ section.id }}" class="custom-featured-product-section">
+        <div class="custom-featured-product-image">
+            {% if section.settings.image != blank %}
+            <img src="{{ section.settings.image | img_url: '480x480' }}" alt="{{ product.title | escape }}">
+            {% else %}
+                <img src="{{ product | img_url: '480x480' }}" alt="{{ product.title | escape }}">
+            {% endif %}
+        </div>
+    <div class="custom-featured-product-content">
+        <h2 class="custom-featured-product-title product__title">{{ product.title }}</h2>
+        <div class="no-js-hidden custom-fetured-product-price" id="price-{{ section.id }}" role="status" {{ block.shopify_attributes }}>
+                  {%- render 'price',
+                    product: product,
+                    use_variant: true,
+                    show_badges: true,
+                    price_class: 'price--large'
+                  -%}
+                </div>
+        {%- form 'product', product -%}
+            <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+            {{ form | payment_terms }}
+          {%- endform -%}
+            <div
+                  id="Quantity-Form-{{ section.id }}"
+                  class="product-form__input product-form__quantity{% if settings.inputs_shadow_vertical_offset != 0 and settings.inputs_shadow_vertical_offset < 0 %} product-form__quantity-top{% endif %}"
+                  {{ block.shopify_attributes }}
+                >
+                  {% comment %} TODO: enable theme-check once `item_count_for_variant` is accepted as valid filter {% endcomment %}
+                  {% # theme-check-disable %}
+                  {%- assign cart_qty = cart
+                    | item_count_for_variant: product.selected_or_first_available_variant.id
+                  -%}
+                  {% # theme-check-enable %}
+                  <quantity-input class="quantity">
+                    <button class="quantity__button no-js-hidden" name="minus" type="button">
+                      <span class="visually-hidden">
+                        {{- 'products.product.quantity.decrease' | t: product: product.title | escape -}}
+                      </span>
+                      {% render 'icon-minus' %}
+                    </button>
+                    <input
+                      class="quantity__input"
+                      type="number"
+                      name="quantity"
+                      id="Quantity-{{ section.id }}"
+                      data-cart-quantity="{{ cart_qty }}"
+                      data-min="{{ product.selected_or_first_available_variant.quantity_rule.min }}"
+                      min="{{ product.selected_or_first_available_variant.quantity_rule.min }}"
+                      {% if product.selected_or_first_available_variant.quantity_rule.max != null %}
+                        data-max="{{ product.selected_or_first_available_variant.quantity_rule.max }}"
+                        max="{{ product.selected_or_first_available_variant.quantity_rule.max }}"
+                      {% endif %}
+                      step="{{ product.selected_or_first_available_variant.quantity_rule.increment }}"
+                      value="{{ product.selected_or_first_available_variant.quantity_rule.min }}"
+                      form="{{ product_form_id }}"
+                    >
+                    <button class="quantity__button no-js-hidden" name="plus" type="button">
+                      <span class="visually-hidden">
+                        {{- 'products.product.quantity.increase' | t: product: product.title | escape -}}
+                      </span>
+                      {% render 'icon-plus' %}
+                    </button>
+                  </quantity-input>
+                  <div class="quantity__rules caption no-js-hidden">
+                    {%- if product.selected_or_first_available_variant.quantity_rule.increment > 1 -%}
+                      <span class="divider">
+                        {{-
+                          'products.product.quantity.multiples_of'
+                          | t: quantity: product.selected_or_first_available_variant.quantity_rule.increment
+                        -}}
+                      </span>
+                    {%- endif -%}
+                    {%- if product.selected_or_first_available_variant.quantity_rule.min > 1 -%}
+                      <span class="divider">
+                        {{-
+                          'products.product.quantity.minimum_of'
+                          | t: quantity: product.selected_or_first_available_variant.quantity_rule.min
+                        -}}
+                      </span>
+                    {%- endif -%}
+                    {%- if product.selected_or_first_available_variant.quantity_rule.max != null -%}
+                      <span class="divider">
+                        {{-
+                          'products.product.quantity.maximum_of'
+                          | t: quantity: product.selected_or_first_available_variant.quantity_rule.max
+                        -}}
+                      </span>
+                    {%- endif -%}
+                  </div>
+                </div>
+        {% render 'product-variant-picker',
+                  product: product,
+                  block: block,
+                  product_form_id: product_form_id,
+                  update_url: false
+                %}
+        {%- render 'buy-buttons',
+            block: block,
+            product: product,
+            product_form_id: product_form_id,
+            section_id: section.id
+        -%}
+        <a
+            {% if product == blank %}
+              role="link" aria-disabled="true"
+            {% else %}
+              href="{{ product.url }}"
+            {% endif %}
+            class="link product__view-details animate-arrow custom-featured-product-url"
+          >
+          {{ 'products.product.view_full_details' | t }}
+          {% render 'icon-arrow' %}
+        </a>
+        </div>
+</div>  
+{% endif %}
+
+{% javascript %}
+    document.getElementById('custom-buy-button').addEventListener('click', function(e) {
+      e.preventDefault();
+  
+      var variantId = this.dataset.variantId;
+      
+      var request = new XMLHttpRequest();
+      request.open('POST', '/cart/add.js');
+      request.setRequestHeader('Content-Type', 'application/json');
+      request.onload = function() {
+        if (request.status >= 200 && request.status < 400) {
+          // If successful, redirect to checkout
+          window.location.href = '/checkout';
+        } else {
+          // Error - display some message to the user
+          alert('Something went wrong. Please try again.');
+        }
+      };
+  
+      // Send variant id and quantity to Shopify to add to cart
+      request.send(JSON.stringify({
+        items: [{
+          quantity: 1,
+          id: variantId
+        }]
+      }));
+    });
+  {% endjavascript %}
+
+{% schema %}
+    {
+        "name": "Custom Featured product",
+        "settings": [
+        {
+            "id": "product",
+            "type": "product",
+            "label": "Select your featured product"
+        },
+        {
+            "id": "image",
+            "type": "image_picker",
+            "label": "Select a Custom Image for Product"
+        },
+        {
+            "id": "background_color",
+            "type": "color",
+            "label": "Background color",
+            "default": "#ffffff"
+        },
+        {
+            "id": "font_color",
+            "type": "color",
+            "label": "Font color",
+            "default": "#000000"
+        },
+        {
+            "id": "font_size",
+            "type": "range",
+            "label": "Font size",
+            "min": 10,
+            "max": 30,
+            "step": 1,
+            "default": 16,
+            "unit": "px"
+        }
+        ],
+        "presets": [
+            {
+            "name": "Custom Featured Product",
+            "category": "Featured Product"
+            }
+        ]
+    }
+    {% endschema %}
