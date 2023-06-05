@@ -43,4 +43,8 @@
   .custom-featured-product-url {
     margin-bottom: 40px;
   }
+
+  .custom-featured-product-section .product-form__input, .custom-featured-product-section .product-form__buttons {
+    margin-bottom: 10px;
+  }
   
